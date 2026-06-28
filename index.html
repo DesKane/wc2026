@@ -346,13 +346,7 @@ function toggleCard(pid) {
 
 function renderDraw() {
   const el = document.getElementById('tab-draw');
-  if (!state.draw) {
-    el.innerHTML = `<div class="draw-not-done">
-      <p>Click below to randomly assign teams to Mum, Dad, Ella and Mia.<br>Each person gets <strong style="color:var(--text)">12 teams</strong> — one from every group. The draw is permanent once confirmed.</p>
-      <button class="btn-draw" onclick="doDraw()">🎲 Do The Draw</button>
-    </div>`;
-    return;
-  }
+  // Draw is always set (fixed)
 
   let html = '';
   Object.entries(GROUPS).forEach(([grp, teams]) => {
@@ -412,20 +406,21 @@ function renderResults() {
 }
 
 // ── Actions ──────────────────────────────────────────────────────────────────
-async function doDraw() {
-  const btn = document.querySelector('.btn-draw');
-  if (btn) { btn.disabled = true; btn.textContent = 'Drawing…'; }
-  state.draw = makeDraw();
-  state.results = {};
-  await pushState();
-  render();
+function doDraw() {
+  // Draw is permanently fixed — this function is disabled
 }
 
-async function setResult(team, result) {
-  state.results[team] = result;
+function setResult(team, result) {
+  if (result === 'group') {
+    delete state.results[team];
+  } else {
+    state.results[team] = result;
+  }
+  saveResults(state.results);
+  setStatus('live', 'Saved ✓');
+  setTimeout(() => setStatus('live', 'Ready'), 1500);
   renderResults();
   renderLeaderboard();
-  await pushState();
 }
 
 function showTab(name) {
@@ -440,9 +435,35 @@ function showTab(name) {
 }
 
 // ── Boot ─────────────────────────────────────────────────────────────────────
-(async function boot() {
-  await fetchState();
-  pollTimer = setInterval(fetchState, 30000);
+const FIXED_DRAW = {
+  'Czechia':'mum','Canada':'mum','Morocco':'mum','USA':'mum',
+  "Côte d'Ivoire":'mum','Tunisia':'mum','Egypt':'mum','Cabo Verde':'mum',
+  'France':'mum','Jordan':'mum','Portugal':'mum','Ghana':'mum',
+  'Mexico':'dad','Bosnia & Herzegovina':'dad','Brazil':'dad','Paraguay':'dad',
+  'Germany':'dad','Japan':'dad','New Zealand':'dad','Uruguay':'dad',
+  'Senegal':'dad','Algeria':'dad','Colombia':'dad','Croatia':'dad',
+  'South Africa':'ella','Switzerland':'ella','Scotland':'ella','Australia':'ella',
+  'Curaçao':'ella','Netherlands':'ella','Belgium':'ella','Saudi Arabia':'ella',
+  'Iraq':'ella','Argentina':'ella','Congo DR':'ella','Panama':'ella',
+  'Korea Republic':'mia','Qatar':'mia','Haiti':'mia','Türkiye':'mia',
+  'Ecuador':'mia','Sweden':'mia','IR Iran':'mia','Spain':'mia',
+  'Norway':'mia','Austria':'mia','Uzbekistan':'mia','England':'mia',
+};
+
+const LS_RESULTS = 'sweepstake-results-v1';
+
+function loadResults() {
+  try { return JSON.parse(localStorage.getItem(LS_RESULTS) || '{}'); } catch(e) { return {}; }
+}
+function saveResults(results) {
+  localStorage.setItem(LS_RESULTS, JSON.stringify(results));
+}
+
+(function boot() {
+  state.draw = FIXED_DRAW;
+  state.results = loadResults();
+  setStatus('live', 'Ready');
+  render();
 })();
 </script>
 </body>
